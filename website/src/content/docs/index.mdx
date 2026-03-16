@@ -38,12 +38,11 @@ PinchGrid solves all of this in a single composable.
 
 ## What makes PinchGrid different
 
-| Approach | Problem |
+| DIY Approach | Problem |
 |----------|---------|
 | Roll your own with `transformable` | Conflicts with LazyVerticalGrid scroll. Pinch and scroll fight each other. |
 | Roll your own with `detectTransformGestures` | Same scroll conflict. Also doesn't cooperate with nested scrolling. |
-| `dokar3/pinch-zoom-grid` | Android-only. Java. Not maintained. No KMP. |
-| **PinchGrid** | Raw `pointerInput` — only consumes when 2+ fingers detected. Single-finger scroll passes through untouched. KMP from day one. |
+| **PinchGrid** | Raw `pointerInput` with `PointerEventPass.Initial` — intercepts two-finger pinch before the grid's scroll handler. Single-finger scroll passes through untouched. KMP from day one. |
 
 ---
 
