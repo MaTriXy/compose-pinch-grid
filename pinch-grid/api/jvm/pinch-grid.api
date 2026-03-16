@@ -26,7 +26,10 @@ public final class io/github/aldefy/pinchgrid/ColumnTransitionSpec$None : io/git
 
 public final class io/github/aldefy/pinchgrid/PinchGridDefaults {
 	public static final field $stable I
+	public static final field BreathingReturnDuration I
+	public static final field BreathingScaleIntensity F
 	public static final field DeadZone F
+	public static final field HapticEnabled Z
 	public static final field INSTANCE Lio/github/aldefy/pinchgrid/PinchGridDefaults;
 	public static final field InitialColumnCount I
 	public static final field MaxColumns I
@@ -37,7 +40,7 @@ public final class io/github/aldefy/pinchgrid/PinchGridDefaults {
 }
 
 public final class io/github/aldefy/pinchgrid/PinchGridKt {
-	public static final fun PinchGrid (Lio/github/aldefy/pinchgrid/PinchGridState;Landroidx/compose/ui/Modifier;Landroidx/compose/foundation/lazy/grid/LazyGridState;Landroidx/compose/foundation/layout/PaddingValues;Landroidx/compose/foundation/layout/Arrangement$Vertical;Landroidx/compose/foundation/layout/Arrangement$Horizontal;FLio/github/aldefy/pinchgrid/ColumnTransitionSpec;ZLkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Landroidx/compose/runtime/Composer;III)V
+	public static final fun PinchGrid (Lio/github/aldefy/pinchgrid/PinchGridState;Landroidx/compose/ui/Modifier;Landroidx/compose/foundation/lazy/grid/LazyGridState;Landroidx/compose/foundation/layout/PaddingValues;Landroidx/compose/foundation/layout/Arrangement$Vertical;Landroidx/compose/foundation/layout/Arrangement$Horizontal;FFFFIZLio/github/aldefy/pinchgrid/ColumnTransitionSpec;ZLkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Landroidx/compose/runtime/Composer;III)V
 }
 
 public final class io/github/aldefy/pinchgrid/PinchGridState {

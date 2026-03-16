@@ -115,13 +115,23 @@ fun PinchGrid(
     contentPadding: PaddingValues = PaddingValues(),
     verticalArrangement: Arrangement.Vertical = Arrangement.spacedBy(0.dp),
     horizontalArrangement: Arrangement.Horizontal = Arrangement.spacedBy(0.dp),
-    thresholdFraction: Float = PinchGridDefaults.ThresholdFraction,
-    transitionSpec: ColumnTransitionSpec = PinchGridDefaults.TransitionSpec,
+    // Gesture tuning
+    thresholdFraction: Float = PinchGridDefaults.ThresholdFraction,         // 0.45f
+    deadZone: Float = PinchGridDefaults.DeadZone,                           // 0.01f
+    pinchOutThresholdMultiplier: Float = PinchGridDefaults.PinchOutThresholdMultiplier, // 0.85f
+    // Visual feedback
+    breathingScaleIntensity: Float = PinchGridDefaults.BreathingScaleIntensity, // 0.10f
+    breathingReturnDuration: Int = PinchGridDefaults.BreathingReturnDuration,   // 150ms
+    hapticEnabled: Boolean = PinchGridDefaults.HapticEnabled,               // true
+    // Transition & control
+    transitionSpec: ColumnTransitionSpec = PinchGridDefaults.TransitionSpec, // None
     gestureEnabled: Boolean = true,
     onColumnChanged: ((newCount: Int) -> Unit)? = null,
     content: LazyGridScope.() -> Unit,
 )
 ```
+
+Every parameter has a tuned default — override only what you need.
 
 ---
 
@@ -183,20 +193,68 @@ PinchGrid(
   </TabItem>
 </Tabs>
 
-### Defaults Reference
+### All Configurable Parameters
 
 | Parameter | Default | What it does |
 |-----------|---------|-------------|
-| `ThresholdFraction` | `0.45f` | Scale change needed to snap. Lower = more sensitive |
-| `DeadZone` | `0.01f` | Micro-movement filter. Prevents jitter from finger tremors |
-| `PinchOutThresholdMultiplier` | `0.85f` | Makes pinch-out 15% easier than pinch-in |
-| `InitialColumnCount` | `3` | Starting columns |
-| `MinColumns` | `1` | Zoom-in limit (single item full width) |
-| `MaxColumns` | `5` | Zoom-out limit (dense grid) |
+| `thresholdFraction` | `0.45f` | Scale change needed to snap. Lower = more sensitive |
+| `deadZone` | `0.01f` | Micro-movement filter. Prevents jitter from finger tremors |
+| `pinchOutThresholdMultiplier` | `0.85f` | Makes pinch-out 15% easier than pinch-in |
+| `breathingScaleIntensity` | `0.10f` | How much the grid scales during pinch. `0f` = disabled |
+| `breathingReturnDuration` | `150` | Milliseconds to animate breathing back to 1.0 on release |
+| `hapticEnabled` | `true` | Toggle platform haptic feedback on column snap |
+| `transitionSpec` | `None` | `None` (instant) or `Crossfade(durationMillis)` |
+| `gestureEnabled` | `true` | Toggle pinch gesture (programmatic control still works) |
+| `initialColumnCount` | `3` | Starting columns (via state) |
+| `minColumns` | `1` | Zoom-in limit (via state) |
+| `maxColumns` | `5` | Zoom-out limit (via state) |
+
+### Configuration Presets
+
+<Tabs>
+  <TabItem label="Google Photos (default)">
+```kotlin
+// Instant reflow, breathing, haptic — the default
+PinchGrid(state = state) { /* content */ }
+```
+  </TabItem>
+  <TabItem label="Tablet-optimized">
+```kotlin
+// Larger fingers need less movement
+PinchGrid(
+    state = state,
+    thresholdFraction = 0.25f,
+    pinchOutThresholdMultiplier = 0.75f,
+) { /* content */ }
+```
+  </TabItem>
+  <TabItem label="Minimal">
+```kotlin
+// Pure column switching, no effects
+PinchGrid(
+    state = state,
+    breathingScaleIntensity = 0f,
+    hapticEnabled = false,
+    transitionSpec = ColumnTransitionSpec.None,
+) { /* content */ }
+```
+  </TabItem>
+  <TabItem label="Cinematic">
+```kotlin
+// Aggressive breathing + crossfade
+PinchGrid(
+    state = state,
+    breathingScaleIntensity = 0.20f,
+    breathingReturnDuration = 300,
+    transitionSpec = ColumnTransitionSpec.Crossfade(250),
+) { /* content */ }
+```
+  </TabItem>
+</Tabs>
 
 ### Asymmetric Thresholds
 
-Pinch-out (spreading fingers) naturally produces less scale change than pinch-in. The `PinchOutThresholdMultiplier` compensates — at `0.85f`, zooming in requires 15% less finger movement than zooming out, making both directions feel equally responsive.
+Pinch-out (spreading fingers) naturally produces less scale change than pinch-in. The `pinchOutThresholdMultiplier` compensates — at `0.85f`, zooming in requires 15% less finger movement than zooming out, making both directions feel equally responsive.
 
 ### Dead Zone
 
@@ -243,7 +301,8 @@ During a pinch gesture, the grid subtly scales up (zooming in) or down (zooming 
 The effect uses `graphicsLayer` — **zero recompositions**, pure GPU transform at 60fps.
 
 - During gesture: scale tracks `scaleProgress` instantly (0ms tween)
-- On release: animates back to 1.0 over 150ms
+- On release: animates back to 1.0 over `breathingReturnDuration` (default 150ms)
+- Control intensity: `breathingScaleIntensity` (default `0.10f` = ±10%, set `0f` to disable)
 
 ### Custom per-item transforms
 
@@ -269,7 +328,7 @@ items(photos, key = { it.id }) { photo ->
 
 ## Haptic Feedback
 
-Fires automatically on every column snap — no configuration needed.
+Fires automatically on every column snap. Disable with `hapticEnabled = false`.
 
 | Platform | Implementation |
 |----------|---------------|

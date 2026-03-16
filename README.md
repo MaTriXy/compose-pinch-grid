@@ -62,13 +62,23 @@ fun PinchGrid(
     contentPadding: PaddingValues = PaddingValues(),
     verticalArrangement: Arrangement.Vertical = Arrangement.spacedBy(0.dp),
     horizontalArrangement: Arrangement.Horizontal = Arrangement.spacedBy(0.dp),
+    // Gesture tuning
     thresholdFraction: Float = PinchGridDefaults.ThresholdFraction,
+    deadZone: Float = PinchGridDefaults.DeadZone,
+    pinchOutThresholdMultiplier: Float = PinchGridDefaults.PinchOutThresholdMultiplier,
+    // Visual feedback
+    breathingScaleIntensity: Float = PinchGridDefaults.BreathingScaleIntensity,
+    breathingReturnDuration: Int = PinchGridDefaults.BreathingReturnDuration,
+    hapticEnabled: Boolean = PinchGridDefaults.HapticEnabled,
+    // Transition & control
     transitionSpec: ColumnTransitionSpec = PinchGridDefaults.TransitionSpec,
     gestureEnabled: Boolean = true,
     onColumnChanged: ((newCount: Int) -> Unit)? = null,
     content: LazyGridScope.() -> Unit,
 )
 ```
+
+Every parameter has a tuned default — override only what you need.
 
 ### State
 
@@ -110,12 +120,45 @@ PinchGrid(
 
 | Parameter | Default | What it does |
 |-----------|---------|-------------|
-| `ThresholdFraction` | `0.45f` | Scale change needed to snap. Lower = more sensitive |
-| `DeadZone` | `0.01f` | Micro-movement filter. Prevents jitter from small finger tremors |
-| `PinchOutThresholdMultiplier` | `0.85f` | Makes pinch-out 15% easier than pinch-in (compensates natural finger asymmetry) |
-| `InitialColumnCount` | `3` | Starting columns |
-| `MinColumns` | `1` | Zoom-in limit (single item full width) |
-| `MaxColumns` | `5` | Zoom-out limit (dense grid) |
+| `thresholdFraction` | `0.45f` | Scale change needed to snap. Lower = more sensitive |
+| `deadZone` | `0.01f` | Micro-movement filter. Prevents jitter from small finger tremors |
+| `pinchOutThresholdMultiplier` | `0.85f` | Makes pinch-out 15% easier than pinch-in (compensates natural finger asymmetry) |
+| `breathingScaleIntensity` | `0.10f` | How much the grid scales during pinch. `0f` = disabled |
+| `breathingReturnDuration` | `150` | Milliseconds to animate breathing back to 1.0 on release |
+| `hapticEnabled` | `true` | Toggle platform haptic feedback on column snap |
+| `InitialColumnCount` | `3` | Starting columns (via state) |
+| `MinColumns` | `1` | Zoom-in limit (via state) |
+| `MaxColumns` | `5` | Zoom-out limit (via state) |
+
+### Configuration Examples
+
+```kotlin
+// Google Photos clone — instant reflow, breathing, haptic (default)
+PinchGrid(state = state) { /* content */ }
+
+// Sensitive gesture for tablets — larger fingers need less movement
+PinchGrid(
+    state = state,
+    thresholdFraction = 0.25f,
+    pinchOutThresholdMultiplier = 0.75f,
+) { /* content */ }
+
+// No visual effects — pure column switching
+PinchGrid(
+    state = state,
+    breathingScaleIntensity = 0f,
+    hapticEnabled = false,
+    transitionSpec = ColumnTransitionSpec.None,
+) { /* content */ }
+
+// Smooth crossfade with aggressive breathing
+PinchGrid(
+    state = state,
+    breathingScaleIntensity = 0.20f,
+    breathingReturnDuration = 300,
+    transitionSpec = ColumnTransitionSpec.Crossfade(durationMillis = 250),
+) { /* content */ }
+```
 
 ### Asymmetric Thresholds
 
@@ -145,6 +188,8 @@ PinchGrid(
 
 During a pinch gesture, the grid subtly scales up (zooming in) or down (zooming out) following your fingers. This provides real-time visual feedback before the column count snaps. The effect uses `graphicsLayer` — **zero recompositions**, pure GPU transform at 60fps.
 
+Control via `breathingScaleIntensity` (default `0.10f` = ±10% scale, `0f` = disabled) and `breathingReturnDuration` (default `150ms`).
+
 You can use `state.scaleProgress` and `state.isZoomingIn` to apply custom per-item transforms:
 
 ```kotlin
@@ -165,7 +210,7 @@ items(photos, key = { it.id }) { photo ->
 
 ## Haptic Feedback
 
-Fires automatically on every column snap:
+Fires automatically on every column snap. Disable with `hapticEnabled = false`.
 
 | Platform | Implementation |
 |----------|---------------|

@@ -32,6 +32,24 @@ public object PinchGridDefaults {
      */
     public const val PinchOutThresholdMultiplier: Float = 0.85f
 
+    /**
+     * Intensity of the breathing scale effect during pinch gesture.
+     * The grid scales by ±(scaleProgress * intensity) during the gesture.
+     * Set to 0f to disable breathing entirely.
+     */
+    public const val BreathingScaleIntensity: Float = 0.10f
+
+    /**
+     * Duration in milliseconds for the breathing scale to animate back to 1.0
+     * after the gesture ends.
+     */
+    public const val BreathingReturnDuration: Int = 150
+
+    /**
+     * Whether haptic feedback fires on column snap events.
+     */
+    public const val HapticEnabled: Boolean = true
+
     /** Default transition spec for column count changes. Google Photos uses None. */
     public val TransitionSpec: ColumnTransitionSpec = ColumnTransitionSpec.None
 }

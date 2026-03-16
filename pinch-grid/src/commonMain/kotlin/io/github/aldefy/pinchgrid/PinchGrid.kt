@@ -44,13 +44,18 @@ public fun PinchGrid(
     verticalArrangement: Arrangement.Vertical = Arrangement.spacedBy(0.dp),
     horizontalArrangement: Arrangement.Horizontal = Arrangement.spacedBy(0.dp),
     thresholdFraction: Float = PinchGridDefaults.ThresholdFraction,
+    deadZone: Float = PinchGridDefaults.DeadZone,
+    pinchOutThresholdMultiplier: Float = PinchGridDefaults.PinchOutThresholdMultiplier,
+    breathingScaleIntensity: Float = PinchGridDefaults.BreathingScaleIntensity,
+    breathingReturnDuration: Int = PinchGridDefaults.BreathingReturnDuration,
+    hapticEnabled: Boolean = PinchGridDefaults.HapticEnabled,
     transitionSpec: ColumnTransitionSpec = PinchGridDefaults.TransitionSpec,
     gestureEnabled: Boolean = true,
     onColumnChanged: ((newCount: Int) -> Unit)? = null,
     content: LazyGridScope.() -> Unit,
 ) {
     val haptic = rememberHapticFeedback()
-    state.hapticFeedback = haptic
+    state.hapticFeedback = if (hapticEnabled) haptic else null
     state.onColumnChanged = onColumnChanged
 
     var savedFirstVisibleItem by remember { mutableIntStateOf(0) }
@@ -68,17 +73,21 @@ public fun PinchGrid(
     }
 
     // Breathing scale: raw target from gesture, animated back to 1.0 on release
-    val breathingTarget = when (state.isZoomingIn) {
-        true -> 1f + (state.scaleProgress * 0.10f)
-        false -> 1f - (state.scaleProgress * 0.10f)
-        null -> 1f // gesture ended — animate back
+    val breathingTarget = if (breathingScaleIntensity > 0f) {
+        when (state.isZoomingIn) {
+            true -> 1f + (state.scaleProgress * breathingScaleIntensity)
+            false -> 1f - (state.scaleProgress * breathingScaleIntensity)
+            null -> 1f // gesture ended — animate back
+        }
+    } else {
+        1f
     }
     val breathingScale by animateFloatAsState(
         targetValue = breathingTarget,
         animationSpec = if (state.isZoomingIn != null) {
             tween(durationMillis = 0) // instant during gesture
         } else {
-            tween(durationMillis = 150) // smooth return on release
+            tween(durationMillis = breathingReturnDuration) // smooth return on release
         },
         label = "breathingScale",
     )
@@ -87,6 +96,8 @@ public fun PinchGrid(
         modifier = modifier.pinchGridGesture(
             state = state,
             thresholdFraction = thresholdFraction,
+            deadZone = deadZone,
+            pinchOutMultiplier = pinchOutThresholdMultiplier,
             enabled = gestureEnabled,
         ),
     ) {
