@@ -9,6 +9,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import kotlin.math.abs
 
 /**
@@ -61,11 +62,20 @@ public class PinchGridState(
     /** Accumulated raw scale delta since last snap. */
     internal var scaleAccumulator: Float by mutableFloatStateOf(0f)
 
+    /**
+     * Saved first visible item index, snapshotted before each column change.
+     * Used by [PinchGrid] to restore scroll position after recomposition.
+     */
+    internal var savedFirstVisibleItemIndex: Int by mutableIntStateOf(0)
+
     /** Callback invoked when column count changes. Set by the composable. */
     internal var onColumnChanged: ((Int) -> Unit)? = null
 
     /** Haptic feedback trigger. Set by the composable via platform expect/actual. */
     internal var hapticFeedback: (() -> Unit)? = null
+
+    /** Grid state reference for snapshotting scroll position. Set by the composable. */
+    internal var gridStateRef: LazyGridState? = null
 
     /**
      * Called by the gesture modifier on each scale event.
@@ -116,6 +126,8 @@ public class PinchGridState(
             }
 
             if (newCount != columnCount) {
+                // Snapshot scroll position BEFORE mutating columnCount
+                gridStateRef?.let { savedFirstVisibleItemIndex = it.firstVisibleItemIndex }
                 previousColumnCount = columnCount
                 columnCount = newCount
                 hapticFeedback?.invoke()
@@ -135,6 +147,8 @@ public class PinchGridState(
     public fun snapToColumn(target: Int) {
         val clamped = target.coerceIn(minColumns, maxColumns)
         if (clamped != columnCount) {
+            // Snapshot scroll position BEFORE mutating columnCount
+            gridStateRef?.let { savedFirstVisibleItemIndex = it.firstVisibleItemIndex }
             previousColumnCount = columnCount
             columnCount = clamped
             scaleAccumulator = 0f

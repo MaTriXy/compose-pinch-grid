@@ -5,16 +5,22 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChanged
 
 /**
  * Attaches pinch-to-resize gesture handling to a composable.
  *
- * Uses raw pointer input to detect two-finger pinch gestures. This approach
- * avoids the scroll-vs-transform conflict that occurs when using [transformable]
- * alongside LazyVerticalGrid — we only consume zoom when two pointers are down,
- * letting single-finger scroll pass through untouched.
+ * Uses raw pointer input with [PointerEventPass.Initial] to intercept two-finger
+ * pinch gestures **before** the child LazyVerticalGrid processes them for scroll.
+ * This is critical: the default [PointerEventPass.Main] goes child→parent, meaning
+ * the grid's scroll handler would see events first and start scrolling before we
+ * can detect the second finger.
+ *
+ * With [PointerEventPass.Initial] (parent→child), we see both fingers arrive first,
+ * consume the zoom events, and the grid's scroll never activates during a pinch.
+ * Single-finger scroll still works because we only consume when 2+ pointers are down.
  *
  * @param state The [PinchGridState] to drive.
  * @param thresholdFraction Scale change fraction required to trigger column snap.
@@ -34,13 +40,14 @@ internal fun Modifier.pinchGridGesture(
 
     return this.pointerInput(state, thresholdFraction, deadZone, pinchOutMultiplier) {
         awaitEachGesture {
-            // Wait for first finger
+            // Wait for first finger — don't require unconsumed so we coexist with scroll
             awaitFirstDown(requireUnconsumed = false)
 
             var isPinching = false
 
             do {
-                val event = awaitPointerEvent()
+                // Initial pass: parent sees events BEFORE child (grid scroll)
+                val event = awaitPointerEvent(PointerEventPass.Initial)
                 val pointers = event.changes
 
                 if (pointers.size >= 2) {
@@ -48,7 +55,7 @@ internal fun Modifier.pinchGridGesture(
 
                     if (zoom != 1f) {
                         isPinching = true
-                        // Consume all pointer changes to prevent scroll
+                        // Consume all pointer changes — grid scroll won't see them
                         pointers.forEach { change ->
                             if (change.positionChanged()) {
                                 change.consume()

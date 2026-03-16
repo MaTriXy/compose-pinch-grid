@@ -17,14 +17,9 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.flow.distinctUntilChanged
 
 /**
  * A lazy vertical grid that supports pinch-to-resize column count,
@@ -57,18 +52,14 @@ public fun PinchGrid(
     val haptic = rememberHapticFeedback()
     state.hapticFeedback = if (hapticEnabled) haptic else null
     state.onColumnChanged = onColumnChanged
+    state.gridStateRef = gridState
 
-    var savedFirstVisibleItem by remember { mutableIntStateOf(0) }
-
-    LaunchedEffect(gridState) {
-        snapshotFlow { gridState.firstVisibleItemIndex }
-            .distinctUntilChanged()
-            .collect { savedFirstVisibleItem = it }
-    }
-
+    // Restore scroll position after column count change.
+    // The position was snapshotted in PinchGridState BEFORE columnCount was mutated,
+    // so it holds the correct pre-change position.
     LaunchedEffect(state.columnCount) {
-        if (savedFirstVisibleItem > 0) {
-            gridState.scrollToItem(savedFirstVisibleItem)
+        if (state.savedFirstVisibleItemIndex > 0) {
+            gridState.scrollToItem(state.savedFirstVisibleItemIndex)
         }
     }
 
