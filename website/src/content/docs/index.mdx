@@ -1,0 +1,67 @@
+---
+title: ComposePinchGrid
+description: Google Photos-style pinch-to-resize grid for Compose Multiplatform
+template: splash
+hero:
+  tagline: A Google Photos-style pinch-to-resize grid built on Compose Foundation. Haptic feedback, breathing scale, smooth transitions. No Material dependency.
+  actions:
+    - text: Get Started
+      link: /compose-pinch-grid/getting-started/installation/
+      icon: right-arrow
+      variant: primary
+    - text: View on GitHub
+      link: https://github.com/aldefy/compose-pinch-grid
+      icon: external
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+## Demo
+
+<p align="center">
+  <img src="/compose-pinch-grid/demo/demo.gif" width="280" alt="ComposePinchGrid demo" />
+</p>
+
+## Why PinchGrid?
+
+<CardGrid>
+  <Card title="Google Photos feel" icon="star">
+    Instant column reflow with breathing scale animation. Tuned thresholds, dead zones, and asymmetric pinch compensation — feels like a first-party app.
+  </Card>
+  <Card title="Zero Material dependency" icon="puzzle">
+    Built on Compose Foundation only. Drop it into Material 2, Material 3, or your own design system.
+  </Card>
+  <Card title="Multiplatform" icon="rocket">
+    Android, iOS, Desktop (JVM), and Web (Wasm) from a single API. True KMP.
+  </Card>
+  <Card title="Haptic feedback" icon="approve-check">
+    Platform-native haptics on every column snap — Android CLOCK_TICK, iOS UISelectionFeedbackGenerator. No-op on Desktop/Web.
+  </Card>
+</CardGrid>
+
+## Platforms
+
+| Android | iOS | Desktop (JVM) | Web (Wasm) |
+|:-------:|:---:|:-------------:|:----------:|
+|    ✓    |  ✓  |       ✓       |     ✓      |
+
+## Quick Example
+
+```kotlin
+@Composable
+fun PhotoGrid(photos: List<Photo>) {
+    val state = rememberPinchGridState()
+
+    PinchGrid(state = state) {
+        items(photos, key = { it.id }) { photo ->
+            AsyncImage(
+                model = photo.url,
+                modifier = Modifier.aspectRatio(1f),
+                contentScale = ContentScale.Crop,
+            )
+        }
+    }
+}
+```
+
+That's it. Pinch to resize, haptic on snap, scroll position preserved.
