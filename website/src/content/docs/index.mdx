@@ -3,7 +3,7 @@ title: ComposePinchGrid
 description: Google Photos-style pinch-to-resize grid for Compose Multiplatform
 template: splash
 hero:
-  tagline: A Google Photos-style pinch-to-resize grid built on Compose Foundation. Haptic feedback, breathing scale, smooth transitions. No Material dependency.
+  tagline: A Google Photos-style pinch-to-resize grid built on Compose Foundation. Pinch to change column count with haptic feedback, breathing scale, and smooth transitions. No Material dependency.
   actions:
     - text: Get Started
       link: /compose-pinch-grid/getting-started/installation/
@@ -14,38 +14,51 @@ hero:
       icon: external
 ---
 
-import { Card, CardGrid } from '@astrojs/starlight/components';
+import { Card, CardGrid, Tabs, TabItem } from '@astrojs/starlight/components';
 
 ## Demo
 
 <p align="center">
-  <img src="/compose-pinch-grid/demo/demo.gif" width="280" alt="ComposePinchGrid demo" />
+  <img src="/compose-pinch-grid/demo/demo.gif" width="280" alt="ComposePinchGrid demo — pinch to resize grid columns on Android" />
 </p>
 
-## Why PinchGrid?
+---
 
-<CardGrid>
-  <Card title="Google Photos feel" icon="star">
-    Instant column reflow with breathing scale animation. Tuned thresholds, dead zones, and asymmetric pinch compensation — feels like a first-party app.
-  </Card>
-  <Card title="Zero Material dependency" icon="puzzle">
-    Built on Compose Foundation only. Drop it into Material 2, Material 3, or your own design system.
-  </Card>
-  <Card title="Multiplatform" icon="rocket">
-    Android, iOS, Desktop (JVM), and Web (Wasm) from a single API. True KMP.
-  </Card>
-  <Card title="Haptic feedback" icon="approve-check">
-    Platform-native haptics on every column snap — Android CLOCK_TICK, iOS UISelectionFeedbackGenerator. No-op on Desktop/Web.
-  </Card>
-</CardGrid>
+## The Problem
 
-## Platforms
+Every photo gallery app needs a pinch-to-resize grid. Google Photos, Samsung Gallery, Apple Photos — they all have it. But if you're building with Compose Multiplatform, you're on your own:
 
-| Android | iOS | Desktop (JVM) | Web (Wasm) |
-|:-------:|:---:|:-------------:|:----------:|
-|    ✓    |  ✓  |       ✓       |     ✓      |
+- **LazyVerticalGrid** has no built-in pinch gesture
+- **`transformable`** conflicts with scroll — pinch fights with single-finger scrolling
+- **Platform haptics** require `expect`/`actual` boilerplate for Android, iOS, Desktop, Web
+- **Scroll position** jumps when column count changes mid-scroll
+- **Gesture tuning** — dead zones, asymmetric thresholds, breathing animations — is surprisingly hard to get right
 
-## Quick Example
+PinchGrid solves all of this in a single composable.
+
+## What makes PinchGrid different
+
+| Approach | Problem |
+|----------|---------|
+| Roll your own with `transformable` | Conflicts with LazyVerticalGrid scroll. Pinch and scroll fight each other. |
+| Roll your own with `detectTransformGestures` | Same scroll conflict. Also doesn't cooperate with nested scrolling. |
+| `dokar3/pinch-zoom-grid` | Android-only. Java. Not maintained. No KMP. |
+| **PinchGrid** | Raw `pointerInput` — only consumes when 2+ fingers detected. Single-finger scroll passes through untouched. KMP from day one. |
+
+---
+
+## Quick Start
+
+### Install
+
+```kotlin
+// build.gradle.kts
+dependencies {
+    implementation("io.github.aldefy:pinch-grid:1.0.0-alpha01")
+}
+```
+
+### Use
 
 ```kotlin
 @Composable
@@ -65,3 +78,285 @@ fun PhotoGrid(photos: List<Photo>) {
 ```
 
 That's it. Pinch to resize, haptic on snap, scroll position preserved.
+
+---
+
+## Why PinchGrid?
+
+<CardGrid>
+  <Card title="Google Photos feel" icon="star">
+    Instant column reflow with breathing scale animation. Tuned thresholds, dead zones, and asymmetric pinch compensation — feels like a first-party app.
+  </Card>
+  <Card title="Zero Material dependency" icon="puzzle">
+    Built on Compose Foundation only. Works with Material 2, Material 3, or your own design system.
+  </Card>
+  <Card title="Multiplatform" icon="rocket">
+    Android, iOS, Desktop (JVM), and Web (Wasm) from a single API. True KMP.
+  </Card>
+  <Card title="Haptic feedback" icon="approve-check">
+    Platform-native haptics on every column snap. Android CLOCK_TICK, iOS UISelectionFeedbackGenerator. No-op on Desktop/Web.
+  </Card>
+</CardGrid>
+
+| Android | iOS | Desktop (JVM) | Web (Wasm) |
+|:-------:|:---:|:-------------:|:----------:|
+|    ✓    |  ✓  |       ✓       |     ✓      |
+
+---
+
+## Full API
+
+```kotlin
+@Composable
+fun PinchGrid(
+    state: PinchGridState,
+    modifier: Modifier = Modifier,
+    gridState: LazyGridState = rememberLazyGridState(),
+    contentPadding: PaddingValues = PaddingValues(),
+    verticalArrangement: Arrangement.Vertical = Arrangement.spacedBy(0.dp),
+    horizontalArrangement: Arrangement.Horizontal = Arrangement.spacedBy(0.dp),
+    thresholdFraction: Float = PinchGridDefaults.ThresholdFraction,
+    transitionSpec: ColumnTransitionSpec = PinchGridDefaults.TransitionSpec,
+    gestureEnabled: Boolean = true,
+    onColumnChanged: ((newCount: Int) -> Unit)? = null,
+    content: LazyGridScope.() -> Unit,
+)
+```
+
+---
+
+## State
+
+```kotlin
+val state = rememberPinchGridState(
+    initialColumnCount = 3,  // start with 3 columns
+    minColumns = 1,          // full-width single item (zoom in limit)
+    maxColumns = 5,          // dense grid (zoom out limit)
+)
+
+// Read current state
+state.columnCount          // current column count
+state.scaleProgress        // 0f–1f, how close to next snap
+state.isZoomingIn          // true = spreading, false = pinching, null = idle
+state.previousColumnCount  // for transition animation
+
+// Programmatic control
+state.snapToColumn(2)      // change from code (buttons, keyboard, a11y)
+```
+
+`rememberPinchGridState` uses `rememberSaveable` — column count survives configuration changes.
+
+---
+
+## Gesture Configuration
+
+The gesture feel is highly configurable. Every parameter has a tuned default, but you can override any of them.
+
+### Threshold Fraction
+
+Controls how much pinch is needed to trigger a column change. Lower = more sensitive.
+
+<Tabs>
+  <TabItem label="Default (0.45)">
+```kotlin
+PinchGrid(
+    state = state,
+    thresholdFraction = 0.45f,  // responsive but not accidental
+) { /* content */ }
+```
+  </TabItem>
+  <TabItem label="Sensitive (0.2)">
+```kotlin
+PinchGrid(
+    state = state,
+    thresholdFraction = 0.2f,  // small pinch triggers change
+) { /* content */ }
+```
+  </TabItem>
+  <TabItem label="Conservative (0.7)">
+```kotlin
+PinchGrid(
+    state = state,
+    thresholdFraction = 0.7f,  // requires deliberate pinch
+) { /* content */ }
+```
+  </TabItem>
+</Tabs>
+
+### Defaults Reference
+
+| Parameter | Default | What it does |
+|-----------|---------|-------------|
+| `ThresholdFraction` | `0.45f` | Scale change needed to snap. Lower = more sensitive |
+| `DeadZone` | `0.01f` | Micro-movement filter. Prevents jitter from finger tremors |
+| `PinchOutThresholdMultiplier` | `0.85f` | Makes pinch-out 15% easier than pinch-in |
+| `InitialColumnCount` | `3` | Starting columns |
+| `MinColumns` | `1` | Zoom-in limit (single item full width) |
+| `MaxColumns` | `5` | Zoom-out limit (dense grid) |
+
+### Asymmetric Thresholds
+
+Pinch-out (spreading fingers) naturally produces less scale change than pinch-in. The `PinchOutThresholdMultiplier` compensates — at `0.85f`, zooming in requires 15% less finger movement than zooming out, making both directions feel equally responsive.
+
+### Dead Zone
+
+The `0.01f` dead zone filters micro-movements. Without it, tiny finger tremors while holding a pinch cause the grid to jitter. You shouldn't need to change this.
+
+---
+
+## Transition Specs
+
+<Tabs>
+  <TabItem label="None (default)">
+Google Photos style — instant column reflow, no animation. This is the default because it matches user expectations for photo grid apps.
+
+```kotlin
+PinchGrid(
+    state = state,
+    transitionSpec = ColumnTransitionSpec.None,
+) { /* content */ }
+```
+  </TabItem>
+  <TabItem label="Crossfade">
+Smooth opacity transition between old and new column layouts. Uses `AnimatedContent` with `fadeIn`/`fadeOut` internally.
+
+```kotlin
+PinchGrid(
+    state = state,
+    transitionSpec = ColumnTransitionSpec.Crossfade(durationMillis = 200),
+) { /* content */ }
+```
+  </TabItem>
+</Tabs>
+
+| Transition | Best for |
+|-----------|----------|
+| `None` | Photo galleries, media grids — instant feedback feels right |
+| `Crossfade` | Content grids, dashboards — smoother but slightly delayed |
+
+---
+
+## Breathing Scale
+
+During a pinch gesture, the grid subtly scales up (zooming in) or down (zooming out) following your fingers. This provides real-time visual feedback before the column count snaps.
+
+The effect uses `graphicsLayer` — **zero recompositions**, pure GPU transform at 60fps.
+
+- During gesture: scale tracks `scaleProgress` instantly (0ms tween)
+- On release: animates back to 1.0 over 150ms
+
+### Custom per-item transforms
+
+You can use `state.scaleProgress` and `state.isZoomingIn` for custom item scaling:
+
+```kotlin
+items(photos, key = { it.id }) { photo ->
+    val itemScale = when (state.isZoomingIn) {
+        true -> 1f + (state.scaleProgress * 0.1f)
+        false -> 1f - (state.scaleProgress * 0.1f)
+        null -> 1f
+    }
+    AsyncImage(
+        model = photo.url,
+        modifier = Modifier
+            .graphicsLayer { scaleX = itemScale; scaleY = itemScale }
+            .aspectRatio(1f),
+    )
+}
+```
+
+---
+
+## Haptic Feedback
+
+Fires automatically on every column snap — no configuration needed.
+
+| Platform | Implementation |
+|----------|---------------|
+| Android | `View.performHapticFeedback(CLOCK_TICK)` |
+| iOS | `UISelectionFeedbackGenerator.selectionChanged()` |
+| Desktop | No-op |
+| Web | No-op |
+
+Uses Kotlin `expect`/`actual` — the right implementation is selected at compile time.
+
+---
+
+## Programmatic Control
+
+For Desktop (no pinch), accessibility, or button-driven UIs:
+
+```kotlin
+val state = rememberPinchGridState()
+
+// Zoom buttons
+Button(onClick = { state.snapToColumn(state.columnCount - 1) }) {
+    Text("Zoom In")
+}
+Button(onClick = { state.snapToColumn(state.columnCount + 1) }) {
+    Text("Zoom Out")
+}
+
+// Disable gesture, keep programmatic control
+PinchGrid(
+    state = state,
+    gestureEnabled = false,
+) { /* content */ }
+```
+
+`snapToColumn` respects `minColumns`/`maxColumns`, triggers haptic feedback, and fires `onColumnChanged`.
+
+---
+
+## Scroll Position Preservation
+
+When the column count changes, the grid snapshots `firstVisibleItemIndex` before the change and restores it after. This prevents the jarring scroll-jump that happens with a naive `GridCells.Fixed()` swap.
+
+For best results, provide stable `key` values:
+
+```kotlin
+items(photos, key = { it.id }) { photo -> /* ... */ }
+```
+
+---
+
+## Architecture
+
+### Why raw `pointerInput` instead of `transformable`?
+
+`transformable` is the obvious choice for pinch gestures, but it **conflicts with LazyVerticalGrid scroll**. Both compete for the same pointer events — a single-finger scroll gets intercepted as the start of a transform, causing the grid to freeze instead of scroll.
+
+PinchGrid uses `awaitEachGesture` with `awaitFirstDown` and only consumes events when **two or more pointers** are detected. Single-finger scroll passes through completely untouched.
+
+```
+User touches screen
+  └─ 1 finger → LazyVerticalGrid handles scroll (PinchGrid ignores)
+  └─ 2 fingers → PinchGrid handles zoom (consumes events, scroll stops)
+  └─ Fingers lift → PinchGrid resets, scroll resumes
+```
+
+### Performance
+
+- **Breathing scale**: `graphicsLayer` only — draw phase, zero recompositions
+- **Column change**: single `mutableIntStateOf` update triggers grid recomposition
+- **Haptic**: fires inline, no coroutine overhead
+- **Scroll restore**: `LaunchedEffect` + `snapshotFlow` — standard Compose pattern
+
+---
+
+## Sample App
+
+The included sample demonstrates all features with 50 picsum.photos images, a live FPS counter, and an interactive threshold tuning slider.
+
+```bash
+# Run on connected Android device
+./gradlew :sample:installDebug
+```
+
+---
+
+## License
+
+```
+Copyright 2026 Adit Lal — Apache License 2.0
+```
