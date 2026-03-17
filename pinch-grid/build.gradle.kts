@@ -87,7 +87,7 @@ android {
 }
 
 // ========== Maven Publishing + Signing ==========
-val libraryVersion = "1.0.0-alpha01"
+val libraryVersion = findProperty("VERSION_NAME")?.toString() ?: "1.0.0-alpha02"
 val libraryGroup = "io.github.aldefy"
 val libraryArtifact = "pinch-grid"
 
