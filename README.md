@@ -24,7 +24,7 @@ A **Google Photos-style** pinch-to-resize grid for Compose Multiplatform. Pinch 
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("io.github.aldefy:pinch-grid:1.0.0-alpha01")
+    implementation("io.github.aldefy:pinch-grid:1.0.0-alpha02")
 }
 ```
 

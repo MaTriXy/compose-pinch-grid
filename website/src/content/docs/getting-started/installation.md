@@ -7,7 +7,7 @@ description: Add PinchGrid to your project
 
 ```kotlin
 dependencies {
-    implementation("io.github.aldefy:pinch-grid:1.0.0-alpha01")
+    implementation("io.github.aldefy:pinch-grid:1.0.0-alpha02")
 }
 ```
 
@@ -16,7 +16,7 @@ dependencies {
 ```toml
 # gradle/libs.versions.toml
 [versions]
-pinch-grid = "1.0.0-alpha01"
+pinch-grid = "1.0.0-alpha02"
 
 [libraries]
 pinch-grid = { group = "io.github.aldefy", name = "pinch-grid", version.ref = "pinch-grid" }
