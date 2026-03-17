@@ -28,6 +28,9 @@ jobs:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.GPG_PASSPHRASE }}
 
+      - name: Clean staging directory
+        run: rm -rf pinch-grid/build/staging-deploy
+
       - name: Build signed staging bundle
         run: |
           ./gradlew :pinch-grid:publishAllPublicationsToLocalStagingRepository \
